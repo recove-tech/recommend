@@ -1,0 +1,21 @@
+name: Process Items
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+
+jobs:
+  process-items:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t vector-processor .
+
+      - name: Run processor for items
+        env:
+          SECRETS_JSON: ${{ secrets.SECRETS_JSON }}
+        run: docker run -e SECRETS_JSON vector-processor --mode item 

@@ -1,0 +1,21 @@
+name: Process Queries
+
+on:
+  schedule:
+    - cron: '30 */12 * * *'
+  workflow_dispatch:
+
+jobs:
+  process-queries:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t vector-processor .
+
+      - name: Run processor for queries
+        env:
+          SECRETS_JSON: ${{ secrets.SECRETS_JSON }}
+        run: docker run -e SECRETS_JSON vector-processor --mode query 
