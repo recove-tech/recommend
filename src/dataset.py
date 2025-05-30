@@ -14,7 +14,13 @@ class BaseUserDataset:
 
     def __len__(self) -> int:
         return len(self.point_ids)
+    
+    def __getitem__(self, index: int) -> Tuple[str, str, Dict[str, Any]]:
+        point_id = self.point_ids[index]
+        metadata = self.metadata_list[index]
 
+        return self.user_id, point_id, metadata
+    
     @classmethod
     def from_bigquery_rows(cls, **kwargs) -> "BaseUserDataset":
         pass
