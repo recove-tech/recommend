@@ -64,7 +64,7 @@ def load_queries(
 def _query_user_items(n: Optional[int] = None, index: Optional[int] = None) -> str:
     query = f"""
     WITH 
-        user_items AS (
+        UserItems AS (
         SELECT DISTINCT user_id, item_id, point_id, '{InteractionType.CLICK_OUT.value}' AS interaction_type
         FROM `{PROJECT_ID}.{PROD_DATASET_ID}.{CLICK_OUT_TABLE_ID}`
         WHERE point_id IS NOT NULL
@@ -73,16 +73,22 @@ def _query_user_items(n: Optional[int] = None, index: Optional[int] = None) -> s
         FROM `{PROJECT_ID}.{PROD_DATASET_ID}.{SAVED_TABLE_ID}`
         WHERE point_id IS NOT NULL
         )
-        , numbered_vectors AS (
-        SELECT ui.*,
-        ROW_NUMBER() OVER (PARTITION BY CONCAT(ui.user_id, ui.item_id) ORDER BY ui.interaction_type) as row_num
-        FROM user_items ui
+        , CategoryTypeItems AS (
+        SELECT ui.*, i.category_type
+        FROM UserItems AS ui
+        INNER JOIN `{PROJECT_ID}.{VINTED_DATASET_ID}.{ITEM_TABLE_ID}` AS i
+        ON ui.item_id = i.id
+        )
+        , Data AS (
+        SELECT cti.*,
+        ROW_NUMBER() OVER (PARTITION BY CONCAT(cti.user_id, cti.item_id) ORDER BY cti.interaction_type) as row_num
+        FROM CategoryTypeItems AS cti
         LEFT JOIN `{PROJECT_ID}.{PROD_DATASET_ID}.{USER_VECTOR_TABLE_ID}` AS uv
-        ON CONCAT(uv.user_id, uv.item_id) = CONCAT(ui.user_id, ui.item_id)
+        ON CONCAT(uv.user_id, uv.item_id) = CONCAT(cti.user_id, cti.item_id)
         WHERE CONCAT(uv.user_id, uv.item_id) IS NULL
         )
     SELECT * EXCEPT(row_num)
-    FROM numbered_vectors
+    FROM Data
     WHERE row_num = 1;
     """
 

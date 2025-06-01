@@ -1,5 +1,6 @@
-from dataclasses import dataclass, field
 from typing import List, Dict, Any, Iterable, Tuple, Callable
+from collections import defaultdict
+from dataclasses import dataclass, field
 
 from uuid import uuid4
 
@@ -13,14 +14,14 @@ class BaseUserDataset:
     metadata_list: List[Dict[str, Any]]
 
     def __len__(self) -> int:
-        return len(self.point_ids)
-    
+        return len(self.metadata_list)
+
     def __getitem__(self, index: int) -> Tuple[str, str, Dict[str, Any]]:
         point_id = self.point_ids[index]
         metadata = self.metadata_list[index]
 
         return self.user_id, point_id, metadata
-    
+
     @classmethod
     def from_bigquery_rows(cls, **kwargs) -> "BaseUserDataset":
         pass
@@ -112,18 +113,27 @@ class VectorUserDataset(BaseUserDataset):
         user_item_index: List[Tuple[str, str]] = [],
     ) -> "VectorUserDataset":
         point_ids, metadata_list, embeddings = [], [], []
+        point_ids_dict = defaultdict(list)
 
         for row in rows:
             point_id = row["point_id"]
             item_id = row["item_id"]
+            namespace = row["category_type"]
 
             if (user_id, item_id) in user_item_index:
                 continue
 
+            point_ids_dict[namespace].append(point_id)
             point_ids.append(point_id)
 
-        fetch_vectors_kwargs["point_ids"] = point_ids
-        vectors = fetch_vectors_fn(**fetch_vectors_kwargs)
+        vectors = []
+
+        for namespace, namespace_point_ids in point_ids_dict.items():
+            fetch_vectors_kwargs["namespace"] = namespace
+            fetch_vectors_kwargs["point_ids"] = namespace_point_ids
+            namespace_vectors = fetch_vectors_fn(**fetch_vectors_kwargs)
+
+            vectors.extend(namespace_vectors)
 
         for vector in vectors:
             embedding = vector.values

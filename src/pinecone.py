@@ -38,9 +38,11 @@ def upload(index: pinecone.Index, vectors: List[Dict], namespace: str) -> bool:
 
 
 def fetch_vectors(
-    index: pinecone.Index, point_ids: List[str]
+    index: pinecone.Index,
+    namespace: str,
+    point_ids: List[str],
 ) -> List[pinecone.ScoredVector]:
-    response = index.fetch(ids=point_ids)
+    response = index.fetch(ids=point_ids, namespace=namespace)
 
     return response.vectors.values()
 
