@@ -73,7 +73,7 @@ def main():
             user_item_index=user_item_index,
         )
 
-        if dataset:
+        if len(dataset) > 0:
             n_inserted_ = process_user_dataset(dataset)
             n_success += min(n_inserted_, 1)
             n_inserted += n_inserted_
