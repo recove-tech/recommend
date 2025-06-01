@@ -20,16 +20,16 @@ def upload(
         return len(response.data)
 
     except Exception as e:
-        num_inserted = 0 
+        num_inserted = 0
 
         for row in rows:
             try:
                 supabase_client.table(table_id).insert(row).execute()
                 num_inserted += 1
             except Exception as e:
-                pass 
+                pass
         return num_inserted
-    
+
     return 0
 
 

@@ -14,4 +14,4 @@ QUERY_TABLE_ID = "query"
 USER_VECTOR_TABLE_ID = "user_vector"
 
 USER_VECTORS_INDEX_NAME = "uservectors"
-ITEMS_INDEX_NAME = "items"
+ITEMS_INDEX_NAME = "vinted"
