@@ -1,0 +1,12 @@
+[Unit]
+Description=Recommend Service
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/Users/pierre-emmanuel/Documents/recove/tech/recommend
+ExecStart=/Users/pierre-emmanuel/Documents/recove/tech/recommend/run_recommend.sh
+User=pierre-emmanuel
+
+[Install]
+WantedBy=multi-user.target
