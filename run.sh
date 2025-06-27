@@ -1,31 +1,26 @@
 #!/bin/bash
 
-# Exit on any error
 set -e
 
-# Log file
-LOG_FILE="recommend.log"
+# Use absolute paths
+SCRIPT_DIR="/home/opc/recommend"
+LOG_DIR="$SCRIPT_DIR/logs"
+VENV_PYTHON="$SCRIPT_DIR/venv/bin/python"
 
-# Function to log messages
+# Ensure logs directory exists
+mkdir -p "$LOG_DIR"
+
+LOG_FILE="$LOG_DIR/$(date '+%Y-%m-%d_%H-%M-%S').log"
+
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-# Change to the project directory
-cd "$(dirname "$0")"
+cd "$SCRIPT_DIR"
 
-log "Starting recommend service"
+log "Starting service"
 
-# Activate virtual environment
-log "Activating virtual environment"
-source venv/bin/activate
+log "Running main.py with virtualenv Python"
+"$VENV_PYTHON" "$SCRIPT_DIR/main.py"
 
-# Run the Python script
-log "Running main.py"
-python main.py
-
-# Log completion
 log "Script completed successfully"
-
-# Deactivate virtual environment
-deactivate
