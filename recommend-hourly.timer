@@ -1,5 +1,5 @@
 [Unit]
-Description=Run Recommend Service every hour
+Description=Run Recommend Service Hourly
 
 [Timer]
 OnCalendar=hourly

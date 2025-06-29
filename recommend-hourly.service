@@ -1,5 +1,5 @@
 [Unit]
-Description=Recommend Service
+Description=Hourly Recommend Service
 After=network.target
 
 [Service]
@@ -11,4 +11,4 @@ ExecStart=/home/opc/recommend/run.sh
 User=opc
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=multi-user.target 
