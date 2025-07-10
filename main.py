@@ -45,7 +45,7 @@ def process_user_dataset(dataset: src.dataset.VectorUserDataset) -> int:
 
 
 def main():
-    secrets = json.loads(os.getenv("SECRETS_JSON"))
+    secrets = src.utils.load_json("secrets.json")
 
     global supabase_url, supabase_key
     supabase_url = secrets["SUPABASE_URL"]
@@ -65,6 +65,8 @@ def main():
     n, n_success, n_inserted = 0, 0, 0
 
     for user_id, group in loader:
+        n_inserted_ = 0
+        
         dataset = src.dataset.VectorUserDataset.from_bigquery_rows(
             user_id=user_id,
             rows=group,

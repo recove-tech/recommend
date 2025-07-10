@@ -4,8 +4,6 @@ from dataclasses import dataclass, field
 
 from uuid import uuid4
 
-from .utils import download_image_as_pil
-
 
 @dataclass
 class BaseUserDataset:
@@ -25,46 +23,6 @@ class BaseUserDataset:
     @classmethod
     def from_bigquery_rows(cls, **kwargs) -> "BaseUserDataset":
         pass
-
-
-@dataclass
-class ImageUserDataset(BaseUserDataset):
-    images: List[Any] = field(default_factory=list)
-
-    def is_valid(self) -> bool:
-        return len(self.images) > 0
-
-    @classmethod
-    def from_bigquery_rows(
-        cls,
-        user_id: str,
-        rows: Iterable,
-        user_item_index: List[Tuple[str, str]],
-    ) -> "ImageUserDataset":
-        point_ids, metadata_list, images = [], [], []
-
-        for row in rows:
-            user_id = row["user_id"]
-            item_id = row["item_id"]
-
-            if (user_id, item_id) in user_item_index:
-                continue
-
-            image = download_image_as_pil(row["image_location"])
-
-            if image:
-                point_id = str(uuid4())
-                point_ids.append(point_id)
-                metadata_list.append(dict(row))
-                images.append(image)
-
-        if point_ids:
-            return cls(
-                user_id=user_id,
-                point_ids=point_ids,
-                metadata_list=metadata_list,
-                images=images,
-            )
 
 
 @dataclass

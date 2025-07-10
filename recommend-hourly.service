@@ -1,0 +1,14 @@
+[Unit]
+Description=Hourly Recommend Service
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/opc/recommend
+Environment="PATH=/home/opc/recommend/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+Environment="PYTHONPATH=/home/opc/recommend"
+ExecStart=/home/opc/recommend/run.sh
+User=opc
+
+[Install]
+WantedBy=multi-user.target 
