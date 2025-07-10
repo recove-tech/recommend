@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, Optional
+from typing import Dict, Iterable, Optional, Literal, Tuple
 from itertools import groupby
 
 from google.cloud import bigquery
@@ -35,15 +35,20 @@ def upload(client: bigquery.Client, dataset_id: str, table_id: str, rows: Dict) 
 
 
 def load_items(
-    client: bigquery.Client, n: Optional[int] = None, index: Optional[int] = None
-) -> Iterable:
-    query = _query_user_items(n, index)
+    client: bigquery.Client,
+    dataset_id: Literal[PROD_DATASET_ID, BACKUP_DATASET_ID],
+    n: Optional[int] = None,
+    index: Optional[int] = None,
+) -> Tuple[Iterable, int]:
+    query = _query_user_items(dataset_id, n, index)
     result = client.query(query).result()
 
     if result.total_rows == 0:
         return []
 
-    return groupby(list(result), key=lambda x: x["user_id"])
+    loader = groupby(list(result), key=lambda x: x["user_id"])
+
+    return loader, result.total_rows
 
 
 def load_queries(
@@ -61,16 +66,20 @@ def load_queries(
     return groupby(list(result), key=lambda x: x["user_id"])
 
 
-def _query_user_items(n: Optional[int] = None, index: Optional[int] = None) -> str:
+def _query_user_items(
+    dataset_id: Literal[PROD_DATASET_ID, BACKUP_DATASET_ID],
+    n: Optional[int] = None,
+    index: Optional[int] = None,
+) -> str:
     query = f"""
     WITH 
         UserItems AS (
         SELECT DISTINCT user_id, item_id, point_id, '{InteractionType.CLICK_OUT.value}' AS interaction_type
-        FROM `{PROJECT_ID}.{PROD_DATASET_ID}.{CLICK_OUT_TABLE_ID}`
+        FROM `{PROJECT_ID}.{dataset_id}.{CLICK_OUT_TABLE_ID}`
         WHERE point_id IS NOT NULL
         UNION ALL
         SELECT DISTINCT user_id, item_id, point_id, '{InteractionType.SAVED.value}' AS interaction_type
-        FROM `{PROJECT_ID}.{PROD_DATASET_ID}.{SAVED_TABLE_ID}`
+        FROM `{PROJECT_ID}.{dataset_id}.{SAVED_TABLE_ID}`
         WHERE point_id IS NOT NULL
         )
         , CategoryTypeItems AS (
@@ -83,7 +92,7 @@ def _query_user_items(n: Optional[int] = None, index: Optional[int] = None) -> s
         SELECT cti.*,
         ROW_NUMBER() OVER (PARTITION BY CONCAT(cti.user_id, cti.item_id) ORDER BY cti.interaction_type) as row_num
         FROM CategoryTypeItems AS cti
-        LEFT JOIN `{PROJECT_ID}.{PROD_DATASET_ID}.{USER_VECTOR_TABLE_ID}` AS uv
+        LEFT JOIN `{PROJECT_ID}.{dataset_id}.{USER_VECTOR_TABLE_ID}` AS uv
         ON CONCAT(uv.user_id, uv.item_id) = CONCAT(cti.user_id, cti.item_id)
         WHERE CONCAT(uv.user_id, uv.item_id) IS NULL
         )

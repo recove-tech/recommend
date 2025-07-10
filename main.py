@@ -1,9 +1,25 @@
-import os, json
-from pinecone import Pinecone
+from typing import Literal
+
+import os, argparse
 import src
 
 
 BATCH_SIZE = None
+SECRETS_DIR = "secrets"
+
+
+def parse_args() -> str:
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["default", "mobile"],
+        default="default",
+    )
+
+    args = parser.parse_args()
+    return args.mode
 
 
 def process_user_dataset(dataset: src.dataset.VectorUserDataset) -> int:
@@ -20,21 +36,21 @@ def process_user_dataset(dataset: src.dataset.VectorUserDataset) -> int:
         )
 
         if not src.pinecone.upload(
-            index=user_vectors_index, vectors=vectors, namespace=namespace
+            index=session.user_index, vectors=vectors, namespace=namespace
         ):
             return 0
 
         if not src.bigquery.upload(
-            client=bq_client,
-            dataset_id=src.enums.PROD_DATASET_ID,
+            client=session.bq_client,
+            dataset_id=session.bq_dataset_id,
             table_id=src.enums.USER_VECTOR_TABLE_ID,
             rows=bq_rows,
         ):
             return 0
 
         return src.supabase.upload(
-            supabase_url=supabase_url,
-            supabase_key=supabase_key,
+            supabase_url=session.supabase_url,
+            supabase_key=session.supabase_key,
             table_id=src.enums.USER_VECTOR_TABLE_ID,
             rows=supabase_rows,
         )
@@ -44,34 +60,36 @@ def process_user_dataset(dataset: src.dataset.VectorUserDataset) -> int:
         return 0
 
 
-def main():
-    secrets = src.utils.load_json("secrets.json")
+def main(mode: Literal["default", "mobile"]):
+    print(f"mode: {mode}")
+    global session
 
-    global supabase_url, supabase_key
-    supabase_url = secrets["SUPABASE_URL"]
-    supabase_key = secrets["SUPABASE_SERVICE_ROLE_KEY"]
+    secrets = src.utils.load_json(os.path.join(SECRETS_DIR, f"{mode}.json"))
+    session = src.session.Session(secrets=secrets, mode=mode)
 
-    global bq_client, user_vectors_index, items_index
+    loader, total_rows = src.bigquery.load_items(
+        client=session.bq_client,
+        dataset_id=session.bq_dataset_id,
+    )
 
-    bq_client = src.bigquery.init_client(secrets["GCP_CREDENTIALS"])
+    print(f"loader: {total_rows}")
 
-    pc_client = Pinecone(api_key=secrets.get("PINECONE_API_KEY"))
-    user_vectors_index = pc_client.Index(src.enums.USER_VECTORS_INDEX_NAME)
-    items_index = pc_client.Index(src.enums.ITEMS_INDEX_NAME)
+    user_item_index = src.supabase.get_user_item_index(
+        session.supabase_url, session.supabase_key
+    )
 
-    loader = src.bigquery.load_items(client=bq_client)
-    user_item_index = src.supabase.get_user_item_index(supabase_url, supabase_key)
+    print(f"existing pairs: {len(user_item_index)}")
 
     n, n_success, n_inserted = 0, 0, 0
 
     for user_id, group in loader:
         n_inserted_ = 0
-        
+
         dataset = src.dataset.VectorUserDataset.from_bigquery_rows(
             user_id=user_id,
             rows=group,
             fetch_vectors_fn=src.pinecone.fetch_vectors,
-            fetch_vectors_kwargs={"index": items_index},
+            fetch_vectors_kwargs={"index": session.item_index},
             user_item_index=user_item_index,
         )
 
@@ -95,4 +113,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    mode = parse_args()
+    main(mode)

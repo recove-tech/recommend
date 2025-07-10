@@ -1,5 +1,6 @@
 PROJECT_ID = "recove-450509"
 PROD_DATASET_ID = "prod"
+BACKUP_DATASET_ID = "backup"
 VINTED_DATASET_ID = "vinted"
 RECOMMEND_DATASET_ID = "recommend"
 
@@ -14,4 +15,5 @@ QUERY_TABLE_ID = "query"
 USER_VECTOR_TABLE_ID = "user_vector"
 
 USER_VECTORS_INDEX_NAME = "uservectors"
+USER_INDEX_NAME = "user"
 ITEMS_INDEX_NAME = "vinted"
