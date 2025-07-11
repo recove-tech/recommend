@@ -3,7 +3,7 @@
 set -e
 
 SCRIPT_DIR="/home/opc/recommend"
-LOG_DIR="$SCRIPT_DIR/logs"
+LOG_DIR="$SCRIPT_DIR/logs/mobile"
 VENV_PYTHON="$SCRIPT_DIR/venv/bin/python"
 
 mkdir -p "$LOG_DIR"
@@ -16,9 +16,9 @@ log() {
 
 cd "$SCRIPT_DIR"
 
-log "Starting service"
+log "Starting mobile service"
 
-log "Running main.py with virtualenv Python"
-"$VENV_PYTHON" "$SCRIPT_DIR/main.py"
+log "Running main.py with virtualenv Python for mobile recommendations"
+"$VENV_PYTHON" "$SCRIPT_DIR/main.py" --mobile
 
-log "Script completed successfully"
+log "Mobile script completed successfully" 
