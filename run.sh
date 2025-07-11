@@ -3,7 +3,7 @@
 set -e
 
 SCRIPT_DIR="/home/opc/recommend"
-LOG_DIR="$SCRIPT_DIR/logs"
+LOG_DIR="$SCRIPT_DIR/logs/default"
 VENV_PYTHON="$SCRIPT_DIR/venv/bin/python"
 
 mkdir -p "$LOG_DIR"
