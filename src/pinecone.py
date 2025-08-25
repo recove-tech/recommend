@@ -33,7 +33,8 @@ def upload(index: pinecone.Index, vectors: List[Dict], namespace: str) -> bool:
     try:
         index.upsert(vectors=vectors, namespace=namespace)
         return True
-    except:
+    except Exception as e:
+        print(e)
         return False
 
 

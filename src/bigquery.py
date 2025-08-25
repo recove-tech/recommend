@@ -73,32 +73,41 @@ def _query_user_items(
 ) -> str:
     query = f"""
     WITH 
-        UserItems AS (
-        SELECT DISTINCT user_id, item_id, point_id, '{InteractionType.CLICK_OUT.value}' AS interaction_type
+    UserItems AS (
+        SELECT DISTINCT user_id, item_id, point_id, '{InteractionType.CLICK_OUT.value}' AS interaction_type, created_at
         FROM `{PROJECT_ID}.{dataset_id}.{CLICK_OUT_TABLE_ID}`
         WHERE point_id IS NOT NULL
         UNION ALL
-        SELECT DISTINCT user_id, item_id, point_id, '{InteractionType.SAVED.value}' AS interaction_type
+        SELECT DISTINCT user_id, item_id, point_id, '{InteractionType.SAVED.value}' AS interaction_type, created_at
         FROM `{PROJECT_ID}.{dataset_id}.{SAVED_TABLE_ID}`
         WHERE point_id IS NOT NULL
-        )
-        , CategoryTypeItems AS (
-        SELECT ui.*, i.category_type
+    )
+    , UserRecords AS (
+        SELECT 
+        ui.*,
+        COALESCE(vinted.category_type, recove.category_type) AS category_type, 
+        (
+        CASE WHEN vinted.id IS NOT NULL 
+        THEN "vinted" 
+        ELSE CASE WHEN recove.id IS NOT NULL THEN "recove" ELSE NULL END
+        END
+        ) AS index_name
         FROM UserItems AS ui
-        INNER JOIN `{PROJECT_ID}.{VINTED_DATASET_ID}.{ITEM_TABLE_ID}` AS i
-        ON ui.item_id = i.id
-        )
-        , Data AS (
-        SELECT cti.*,
-        ROW_NUMBER() OVER (PARTITION BY CONCAT(cti.user_id, cti.item_id) ORDER BY cti.interaction_type) as row_num
-        FROM CategoryTypeItems AS cti
+        LEFT JOIN `{PROJECT_ID}.{VINTED_DATASET_ID}.{ITEM_METADATA_TABLE_ID}` AS vinted ON ui.item_id = vinted.id
+        LEFT JOIN `{PROJECT_ID}.{RECOVE_DATASET_ID}.{ITEM_TABLE_ID}` AS recove ON ui.item_id = recove.id
+    )
+    , Data AS (
+        SELECT ur.*,
+        ROW_NUMBER() OVER (PARTITION BY CONCAT(ur.user_id, ur.item_id) ORDER BY ur.interaction_type) as row_num
+        FROM UserRecords AS ur
         LEFT JOIN `{PROJECT_ID}.{dataset_id}.{USER_VECTOR_TABLE_ID}` AS uv
-        ON CONCAT(uv.user_id, uv.item_id) = CONCAT(cti.user_id, cti.item_id)
-        WHERE CONCAT(uv.user_id, uv.item_id) IS NULL
-        )
+        ON CONCAT(uv.user_id, uv.item_id) = CONCAT(ur.user_id, ur.item_id)
+        WHERE CONCAT(uv.user_id, uv.item_id) IS NULL AND ur.index_name IS NOT NULL AND ur.category_type IS NOT NULL
+    )
     SELECT * EXCEPT(row_num)
     FROM Data
-    WHERE row_num = 1;
+    WHERE row_num = 1
+    ORDER BY created_at DESC;
     """
 
     if n:

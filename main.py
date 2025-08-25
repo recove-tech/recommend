@@ -1,25 +1,12 @@
 from typing import Literal
 
-import os, argparse
+import os
 import src
 
 
 BATCH_SIZE = None
 SECRETS_DIR = "secrets"
-
-
-def parse_args() -> str:
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "--mode",
-        type=str,
-        choices=["default", "mobile"],
-        default="default",
-    )
-
-    args = parser.parse_args()
-    return args.mode
+DISPLAY_EVERY = 50
 
 
 def process_user_dataset(dataset: src.dataset.VectorUserDataset) -> int:
@@ -60,12 +47,11 @@ def process_user_dataset(dataset: src.dataset.VectorUserDataset) -> int:
         return 0
 
 
-def main(mode: Literal["default", "mobile"]):
-    print(f"mode: {mode}")
+def main(mode: Literal["default", "mobile"] = "mobile"):
     global session
 
     secrets = src.utils.load_json(os.path.join(SECRETS_DIR, f"{mode}.json"))
-    session = src.session.Session(secrets=secrets, mode=mode)
+    session = src.session.Session(secrets=secrets)
 
     loader, total_rows = src.bigquery.load_items(
         client=session.bq_client,
@@ -73,13 +59,6 @@ def main(mode: Literal["default", "mobile"]):
     )
 
     print(f"loader: {total_rows}")
-
-    user_item_index = src.supabase.get_user_item_index(
-        session.supabase_url, session.supabase_key
-    )
-
-    print(f"existing pairs: {len(user_item_index)}")
-
     n, n_success, n_inserted = 0, 0, 0
 
     for user_id, group in loader:
@@ -88,12 +67,8 @@ def main(mode: Literal["default", "mobile"]):
         dataset = src.dataset.VectorUserDataset.from_bigquery_rows(
             user_id=user_id,
             rows=group,
-            fetch_vectors_fn=src.pinecone.fetch_vectors,
-            fetch_vectors_kwargs={"index": session.item_index},
-            user_item_index=user_item_index,
+            index_mapping=session.index_mapping,
         )
-
-        n_inserted_ = 0
 
         if len(dataset) > 0:
             n_inserted_ = process_user_dataset(dataset)
@@ -103,15 +78,15 @@ def main(mode: Literal["default", "mobile"]):
 
         success_rate = n_success / n if n > 0 else 0
 
-        print(
-            f"User: {user_id} | "
-            f"Inserted: {n_inserted_} | "
-            f"Total users: {n} | "
-            f"Total Inserted: {n_inserted} | "
-            f"Success rate: {success_rate:.2f}"
-        )
+        if n_inserted_:
+            print(
+                f"User: {user_id} | "
+                f"Inserted: {n_inserted_} | "
+                f"Total users: {n} | "
+                f"Total Inserted: {n_inserted} | "
+                f"Success rate: {success_rate:.2f}"
+            )
 
 
 if __name__ == "__main__":
-    mode = parse_args()
-    main(mode)
+    main()

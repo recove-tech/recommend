@@ -20,6 +20,6 @@ cd "$SCRIPT_DIR"
 log "Starting mobile service"
 
 log "Running main.py with virtualenv Python for mobile recommendations"
-"$VENV_PYTHON" "$SCRIPT_DIR/main.py" --mode mobile
+"$VENV_PYTHON" "$SCRIPT_DIR/main.py" --mode mobile 2>&1 | tee -a "$LOG_FILE" | tee -a "$LATEST_LOG" > /dev/null
 
 log "Mobile script completed successfully" 
