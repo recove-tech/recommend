@@ -107,14 +107,14 @@ def _query_user_items(
     SELECT * EXCEPT(row_num)
     FROM Data
     WHERE row_num = 1
-    ORDER BY created_at DESC;
+    ORDER BY created_at DESC
     """
 
     if n:
-        query += f"LIMIT {n}"
+        query += f" LIMIT {n}"
 
         if index:
-            query += f"OFFSET {index * n}"
+            query += f" OFFSET {index * n}"
 
     return query
 

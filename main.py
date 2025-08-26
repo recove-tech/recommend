@@ -49,13 +49,11 @@ def process_user_dataset(dataset: src.dataset.VectorUserDataset) -> int:
 
 def main(mode: Literal["default", "mobile"] = "mobile"):
     global session
-
     secrets = src.utils.load_json(os.path.join(SECRETS_DIR, f"{mode}.json"))
     session = src.session.Session(secrets=secrets)
 
     loader, total_rows = src.bigquery.load_items(
-        client=session.bq_client,
-        dataset_id=session.bq_dataset_id,
+        client=session.bq_client, dataset_id=session.bq_dataset_id
     )
 
     print(f"loader: {total_rows}")
@@ -78,13 +76,22 @@ def main(mode: Literal["default", "mobile"] = "mobile"):
 
         success_rate = n_success / n if n > 0 else 0
 
+        if not dataset.usage.is_empty:
+            success = src.bigquery.upload(
+                client=session.bq_client,
+                dataset_id=src.enums.BACKUP_DATASET_ID,
+                table_id=src.enums.PINECONE_USAGE_TABLE_ID,
+                rows=[dataset.usage.to_dict()],
+            )
+
         if n_inserted_:
             print(
                 f"User: {user_id} | "
                 f"Inserted: {n_inserted_} | "
                 f"Total users: {n} | "
                 f"Total Inserted: {n_inserted} | "
-                f"Success rate: {success_rate:.2f}"
+                f"Success rate: {success_rate:.2f} | "
+                f"Uploaded usage: {success}"
             )
 
 

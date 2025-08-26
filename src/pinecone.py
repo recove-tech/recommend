@@ -42,10 +42,11 @@ def fetch_vectors(
     index: pinecone.Index,
     namespace: str,
     point_ids: List[str],
-) -> List[pinecone.ScoredVector]:
+) -> Tuple[List[pinecone.ScoredVector], int]:
     response = index.fetch(ids=point_ids, namespace=namespace)
+    read_units = response["usage"]["read_units"]
 
-    return response.vectors.values()
+    return response.vectors.values(), read_units
 
 
 def _create_vector(point_id: str, metadata: Dict, embedding: List[float]) -> Vector:
