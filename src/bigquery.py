@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, Optional, Literal, Tuple
+from typing import Dict, List, Optional, Literal, Tuple
 from itertools import groupby
 
 from google.cloud import bigquery
@@ -34,19 +34,26 @@ def upload(client: bigquery.Client, dataset_id: str, table_id: str, rows: Dict) 
         return False
 
 
-def load_items(
+def get_items_dataloader(
     client: bigquery.Client,
     dataset_id: Literal[PROD_DATASET_ID, BACKUP_DATASET_ID],
     n_users: Optional[int] = None,
     only_new: bool = True,
-) -> Tuple[Iterable, int]:
+) -> Tuple[Dict[str, List[bigquery.table.Row]], int]:
     query = _query_user_items(dataset_id, n_users, only_new)
     result = client.query(query).result()
 
     if result.total_rows == 0:
         return []
 
-    loader = groupby(list(result), key=lambda x: x["user_id"])
+    loader = {}
+
+    iterator = groupby(
+        sorted(result, key=lambda x: x["user_id"]), key=lambda x: x["user_id"]
+    )
+
+    for user_id, group in iterator:
+        loader[user_id] = list(group)
 
     return loader, result.total_rows
 
