@@ -1,12 +1,26 @@
-from typing import Literal
+from typing import Tuple, Iterable
 
-import os
 import src
 
 
 BATCH_SIZE = None
-SECRETS_DIR = "secrets"
+SECRETS_PATH = "secrets/mobile.json"
 DISPLAY_EVERY = 50
+NUM_USERS = 1000
+MIN_NUM_INSERTS = 100
+
+
+def get_dataloader(only_new: bool) -> Tuple[Iterable, int]:
+    kwargs = {
+        "client": session.bq_client,
+        "dataset_id": session.bq_dataset_id,
+        "only_new": only_new,
+        "n_users": NUM_USERS if not only_new else None,
+    }
+
+    loader, total_rows = src.bigquery.load_items(**kwargs)
+
+    return loader, total_rows
 
 
 def process_user_dataset(dataset: src.dataset.VectorUserDataset) -> int:
@@ -47,17 +61,11 @@ def process_user_dataset(dataset: src.dataset.VectorUserDataset) -> int:
         return 0
 
 
-def main(mode: Literal["default", "mobile"] = "mobile"):
-    global session
-    secrets = src.utils.load_json(os.path.join(SECRETS_DIR, f"{mode}.json"))
-    session = src.session.Session(secrets=secrets)
-
-    loader, total_rows = src.bigquery.load_items(
-        client=session.bq_client, dataset_id=session.bq_dataset_id
-    )
-
-    print(f"loader: {total_rows}")
+def process_data(
+    loader: Iterable, total_rows: int, only_new: bool, read_units: int = 0
+) -> int:
     n, n_success, n_inserted = 0, 0, 0
+    print(f"loader: {total_rows} | only_new: {only_new}")
 
     for user_id, group in loader:
         n_inserted_ = 0
@@ -67,6 +75,8 @@ def main(mode: Literal["default", "mobile"] = "mobile"):
             rows=group,
             index_mapping=session.index_mapping,
         )
+
+        read_units += dataset.usage.read_units
 
         if len(dataset) > 0:
             n_inserted_ = process_user_dataset(dataset)
@@ -91,8 +101,25 @@ def main(mode: Literal["default", "mobile"] = "mobile"):
                 f"Total users: {n} | "
                 f"Total Inserted: {n_inserted} | "
                 f"Success rate: {success_rate:.2f} | "
-                f"Uploaded usage: {success}"
+                f"Uploaded usage: {success} | "
+                f"Costs: {read_units * src.enums.PINECONE_PER_READ_UNIT_COST:.3f}$"
             )
+
+    return n_inserted, read_units
+
+
+def main():
+    global session
+    secrets = src.utils.load_json(SECRETS_PATH)
+    session = src.session.Session(secrets=secrets)
+
+    loader, total_rows = get_dataloader(only_new=True)
+    n_inserted, read_units = process_data(loader, total_rows, True)
+
+    if n_inserted < MIN_NUM_INSERTS:
+        print("No insertions with only_new=True, retrying with only_new=False")
+        loader, total_rows = get_dataloader(only_new=False)
+        process_data(loader, total_rows, False, read_units)
 
 
 if __name__ == "__main__":

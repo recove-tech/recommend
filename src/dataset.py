@@ -112,7 +112,7 @@ class VectorUserDataset(BaseUserDataset):
                 vectors.extend(namespace_vectors)
                 point_ids.extend(namespace_point_ids)
                 item_ids.extend(namespace_item_ids)
-                usage.add(PineconeUsageEntry(read_units=read_units))
+                usage.add(PineconeUsageEntry(read_units))
 
         for vector, item_id in zip(vectors, item_ids):
             embedding = vector.values
