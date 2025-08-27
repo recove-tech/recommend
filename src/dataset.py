@@ -1,8 +1,14 @@
-from typing import List, Dict, Any, Iterable, Tuple, Callable
+from typing import List, Dict, Any, Iterable, Tuple
 from collections import defaultdict
 from dataclasses import dataclass, field
 
 from uuid import uuid4
+
+import pinecone
+
+from .enums import VINTED_INDEX_NAME, RECOVE_INDEX_NAME
+from .pinecone import fetch_vectors
+from .models import PineconeUsage, PineconeUsageEntry
 
 
 @dataclass
@@ -57,6 +63,7 @@ class TextUserDataset(BaseUserDataset):
 @dataclass
 class VectorUserDataset(BaseUserDataset):
     embeddings: List[List[float]] = field(default_factory=list)
+    usage: PineconeUsage = field(default_factory=PineconeUsage)
 
     def is_valid(self) -> bool:
         return len(self.embeddings) > 0
@@ -66,34 +73,48 @@ class VectorUserDataset(BaseUserDataset):
         cls,
         user_id: str,
         rows: Iterable,
-        fetch_vectors_fn: Callable,
-        fetch_vectors_kwargs: Dict = {},
+        index_mapping: Dict[str, pinecone.Index],
         user_item_index: List[Tuple[str, str]] = [],
     ) -> "VectorUserDataset":
-        point_ids, metadata_list, embeddings = [], [], []
-        point_ids_dict = defaultdict(list)
+        metadata_list, embeddings = [], []
+        usage = PineconeUsage()
+
+        point_ids_dict = {
+            VINTED_INDEX_NAME: defaultdict(list),
+            RECOVE_INDEX_NAME: defaultdict(list),
+        }
 
         for row in rows:
             point_id = row["point_id"]
             item_id = row["item_id"]
             namespace = row["category_type"]
+            index_name = row["index_name"]
 
             if (user_id, item_id) in user_item_index:
                 continue
 
-            point_ids_dict[namespace].append(point_id)
-            point_ids.append(point_id)
+            point_ids_dict[index_name][namespace].append((point_id, item_id))
 
-        vectors = []
+        vectors, point_ids, item_ids = [], [], []
 
-        for namespace, namespace_point_ids in point_ids_dict.items():
-            fetch_vectors_kwargs["namespace"] = namespace
-            fetch_vectors_kwargs["point_ids"] = namespace_point_ids
-            namespace_vectors = fetch_vectors_fn(**fetch_vectors_kwargs)
+        for index_name in point_ids_dict:
+            for namespace in point_ids_dict[index_name]:
+                namespace_data = point_ids_dict[index_name][namespace]
+                namespace_point_ids = [point_id for point_id, _ in namespace_data]
+                namespace_item_ids = [item_id for _, item_id in namespace_data]
 
-            vectors.extend(namespace_vectors)
+                namespace_vectors, read_units = fetch_vectors(
+                    index=index_mapping[index_name],
+                    namespace=namespace,
+                    point_ids=namespace_point_ids,
+                )
 
-        for vector in vectors:
+                vectors.extend(namespace_vectors)
+                point_ids.extend(namespace_point_ids)
+                item_ids.extend(namespace_item_ids)
+                usage.add(PineconeUsageEntry(read_units))
+
+        for vector, item_id in zip(vectors, item_ids):
             embedding = vector.values
 
             metadata = vector.metadata
@@ -108,4 +129,5 @@ class VectorUserDataset(BaseUserDataset):
             point_ids=point_ids,
             metadata_list=metadata_list,
             embeddings=embeddings,
+            usage=usage,
         )

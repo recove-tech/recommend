@@ -1,9 +1,12 @@
 PROJECT_ID = "recove-450509"
 PROD_DATASET_ID = "prod"
+BACKUP_DATASET_ID = "backup"
 VINTED_DATASET_ID = "vinted"
 RECOMMEND_DATASET_ID = "recommend"
+RECOVE_DATASET_ID = "recove"
 
-ITEM_TABLE_ID = "item_metadata"
+ITEM_METADATA_TABLE_ID = "item_metadata"
+ITEM_TABLE_ID = "item"
 CLICK_OUT_TABLE_ID = "click_out"
 SAVED_TABLE_ID = "saved"
 PINECONE_TABLE_ID = "pinecone"
@@ -12,6 +15,11 @@ PINECONE_ITEM_TABLE_ID = "pinecone_item"
 QUERIES_TABLE_ID = "queries"
 QUERY_TABLE_ID = "query"
 USER_VECTOR_TABLE_ID = "user_vector"
+PINECONE_USAGE_TABLE_ID = "pinecone_usage"
 
 USER_VECTORS_INDEX_NAME = "uservectors"
-ITEMS_INDEX_NAME = "vinted"
+USER_INDEX_NAME = "user"
+VINTED_INDEX_NAME = "vinted"
+RECOVE_INDEX_NAME = "recove"
+
+PINECONE_PER_READ_UNIT_COST = 0.000016

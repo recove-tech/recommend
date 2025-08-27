@@ -28,9 +28,8 @@ def upload(
                 num_inserted += 1
             except Exception as e:
                 pass
-        return num_inserted
 
-    return 0
+        return num_inserted
 
 
 def get_user_item_index(supabase_url: str, supabase_key: str) -> List[Tuple[str, str]]:
