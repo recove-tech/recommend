@@ -7,7 +7,7 @@ BATCH_SIZE = None
 SECRETS_PATH = "secrets/mobile.json"
 DISPLAY_EVERY = 50
 NUM_USERS = 1000
-MIN_NUM_INSERTS = 100
+MIN_NUM_INSERTS = 1000
 
 
 def process_user_dataset(dataset: src.dataset.VectorUserDataset) -> int:
