@@ -109,7 +109,9 @@ if __name__ == "__main__":
     n_inserted, read_units = main(loader, total_rows, True)
 
     if n_inserted < MIN_NUM_INSERTS:
-        print(f"Only {n_inserted} insertions with only_new=True, retrying with only_new=False")
+        print(
+            f"Only {n_inserted} insertions with only_new=True, retrying with only_new=False"
+        )
 
         kwargs["only_new"] = False
         kwargs["n_users"] = NUM_USERS

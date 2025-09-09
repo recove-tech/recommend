@@ -31,7 +31,8 @@ def upload(index: pinecone.Index, vectors: List[Dict], namespace: str) -> bool:
         return False
 
     try:
-        index.upsert(vectors=vectors, namespace=namespace)
+        for chunk in _chunk_vectors(vectors):
+            index.upsert(vectors=chunk, namespace=namespace)
         return True
     except Exception as e:
         print(e)
@@ -75,3 +76,7 @@ def _create_supabase_row(point_id: str, metadata: Dict) -> SupabaseRow:
         item_id=metadata.get("item_id"),
         point_id=point_id,
     )
+
+
+def _chunk_vectors(vectors: List[Dict], chunk_size: int = 100) -> List[List[Dict]]:
+    return [vectors[i : i + chunk_size] for i in range(0, len(vectors), chunk_size)]
