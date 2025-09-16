@@ -6,7 +6,7 @@ import src
 BATCH_SIZE = None
 SECRETS_PATH = "secrets/mobile.json"
 DISPLAY_EVERY = 50
-NUM_USERS = 1000
+NUM_USERS = 2000
 MIN_NUM_INSERTS = 1000
 
 
