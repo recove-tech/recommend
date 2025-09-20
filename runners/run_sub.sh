@@ -22,4 +22,4 @@ log "Subscribed users"
 log "Running main.py..."
 "$VENV_PYTHON" "$SCRIPT_DIR/main.py" --is_subscribed true 2>&1 | tee -a "$LOG_FILE" | tee -a "$LATEST_LOG" > /dev/null
 
-log Done."
+log "Done."
