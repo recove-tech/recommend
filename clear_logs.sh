@@ -1,8 +1,4 @@
 #!/bin/bash
-
-# Script to clear log files from logs/default and logs/mobile directories
-
-# Function to safely remove files from a directory
 clear_directory() {
     local dir="$1"
     if [ -d "$dir" ]; then
@@ -14,13 +10,9 @@ clear_directory() {
     fi
 }
 
-# Main script
 echo "Starting log cleanup..."
 
-# Clear logs/default
-clear_directory "logs/default"
-
-# Clear logs/mobile
-clear_directory "logs/mobile"
+clear_directory "logs/run"
+clear_directory "logs/run_sub"
 
 echo "Log cleanup completed" 

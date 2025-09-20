@@ -16,6 +16,7 @@ QUERIES_TABLE_ID = "queries"
 QUERY_TABLE_ID = "query"
 USER_VECTOR_TABLE_ID = "user_vector"
 PINECONE_USAGE_TABLE_ID = "pinecone_usage"
+SUBSCRIPTION_TABLE_ID = "subscription"
 
 USER_VECTORS_INDEX_NAME = "uservectors"
 USER_INDEX_NAME = "user"

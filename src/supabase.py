@@ -1,6 +1,6 @@
 from typing import List, Dict, Tuple
 from supabase import create_client, Client
-from .enums import USER_VECTOR_TABLE_ID
+from .enums import USER_VECTOR_TABLE_ID, SUBSCRIPTION_TABLE_ID
 
 
 def init_supabase_client(url: str, key: str) -> Client:
@@ -47,6 +47,27 @@ def get_user_item_index(supabase_url: str, supabase_key: str) -> List[Tuple[str,
             distinct_pairs.add((row["user_id"], row["item_id"]))
 
         return list(distinct_pairs)
+
+    except Exception as e:
+        print(e)
+        return []
+
+
+def get_subscribed_users(supabase_url: str, supabase_key: str) -> List[str]:
+    supabase_client = init_supabase_client(supabase_url, supabase_key)
+
+    try:
+        response = (
+            supabase_client.table(SUBSCRIPTION_TABLE_ID).select("user_id").execute()
+        )
+        user_ids = []
+
+        for row in response.data:
+            user_id = row["user_id"]
+            if user_id not in user_ids:
+                user_ids.append(user_id)
+
+        return user_ids
 
     except Exception as e:
         print(e)

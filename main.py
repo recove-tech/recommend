@@ -1,5 +1,6 @@
 from typing import Iterable
 
+import argparse
 import src
 
 
@@ -7,7 +8,22 @@ BATCH_SIZE = None
 SECRETS_PATH = "secrets/mobile.json"
 DISPLAY_EVERY = 50
 NUM_USERS = 2000
-MIN_NUM_INSERTS = 1000
+MIN_NUM_INSERTS = 5000
+
+
+def parse_args() -> bool:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--is_subscribed",
+        "-sub",
+        type=lambda x: x.lower() == "true",
+        required=True,
+        default=True,
+    )
+
+    args = parser.parse_args()
+
+    return args.is_subscribed
 
 
 def process_user_dataset(dataset: src.dataset.VectorUserDataset) -> int:
@@ -48,7 +64,9 @@ def process_user_dataset(dataset: src.dataset.VectorUserDataset) -> int:
         return 0
 
 
-def main(loader: Iterable, total_rows: int, only_new: bool, read_units: int = 0) -> int:
+def process_loader(
+    loader: Iterable, total_rows: int, only_new: bool, read_units: int = 0
+) -> int:
     n, n_success, n_inserted = 0, 0, 0
     print(f"loader: {total_rows} | only_new: {only_new}")
 
@@ -94,27 +112,40 @@ def main(loader: Iterable, total_rows: int, only_new: bool, read_units: int = 0)
     return n_inserted, read_units
 
 
-if __name__ == "__main__":
+def main(is_subscribed: bool) -> None:
     global session
     secrets = src.utils.load_json(SECRETS_PATH)
     session = src.session.Session(secrets=secrets)
+
+    if is_subscribed:
+        user_ids = src.supabase.get_subscribed_users(
+            session.supabase_url, session.supabase_key
+        )
+    else:
+        user_ids = None
 
     kwargs = {
         "client": session.bq_client,
         "dataset_id": session.bq_dataset_id,
         "only_new": True,
+        "user_ids": user_ids,
     }
 
     loader, total_rows = src.bigquery.get_items_dataloader(**kwargs)
-    n_inserted, read_units = main(loader, total_rows, True)
+    n_inserted, read_units = process_loader(loader, total_rows, True)
 
-    if n_inserted < MIN_NUM_INSERTS:
+    if is_subscribed or n_inserted < MIN_NUM_INSERTS:
         print(
             f"Only {n_inserted} insertions with only_new=True, retrying with only_new=False"
         )
 
         kwargs["only_new"] = False
-        kwargs["n_users"] = NUM_USERS
+        kwargs["n_users"] = None if is_subscribed else NUM_USERS
         loader, total_rows = src.bigquery.get_items_dataloader(**kwargs)
 
-        main(loader, total_rows, False, read_units)
+        process_loader(loader, total_rows, False, read_units)
+
+
+if __name__ == "__main__":
+    is_subscribed = parse_args()
+    main(is_subscribed)

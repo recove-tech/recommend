@@ -39,12 +39,13 @@ def get_items_dataloader(
     dataset_id: Literal[PROD_DATASET_ID, BACKUP_DATASET_ID],
     n_users: Optional[int] = None,
     only_new: bool = True,
+    user_ids: Optional[List[str]] = None,
 ) -> Tuple[Dict[str, List[bigquery.table.Row]], int]:
-    query = _query_user_items(dataset_id, n_users, only_new)
+    query = _query_user_items(dataset_id, n_users, only_new, user_ids)
     result = client.query(query).result()
 
     if result.total_rows == 0:
-        return []
+        return [], 0
 
     loader = {}
 
@@ -62,17 +63,24 @@ def _query_user_items(
     dataset_id: Literal[PROD_DATASET_ID, BACKUP_DATASET_ID],
     n_users: Optional[int] = None,
     only_new: bool = False,
+    user_ids: Optional[List[str]] = None,
 ) -> str:
+    if user_ids:
+        user_ids_str = [f"'{user_id}'" for user_id in user_ids]
+        user_id_condition = f"AND user_id IN ({', '.join(user_ids_str)})"
+    else:
+        user_id_condition = ""
+
     query = f"""
 WITH 
 UserItems AS (
     SELECT DISTINCT user_id, item_id, point_id, '{InteractionType.CLICK_OUT.value}' AS interaction_type, created_at
     FROM `{PROJECT_ID}.{dataset_id}.{CLICK_OUT_TABLE_ID}`
-    WHERE point_id IS NOT NULL
+    WHERE point_id IS NOT NULL {user_id_condition}
     UNION ALL
     SELECT DISTINCT user_id, item_id, point_id, '{InteractionType.SAVED.value}' AS interaction_type, created_at
     FROM `{PROJECT_ID}.{dataset_id}.{SAVED_TABLE_ID}`
-    WHERE point_id IS NOT NULL)
+    WHERE point_id IS NOT NULL {user_id_condition})
 , UserRecords AS (
     SELECT 
     ui.*,
