@@ -1,6 +1,9 @@
 from typing import List, Dict, Tuple
+from datetime import datetime
 from supabase import create_client, Client
-from .enums import USER_VECTOR_TABLE_ID, SUBSCRIPTION_TABLE_ID
+
+from .models import Subscription
+from .enums import USER_VECTOR_TABLE_ID, GET_ACTIVE_SUBSCRIPTIONS_RPC_NAME
 
 
 def init_supabase_client(url: str, key: str) -> Client:
@@ -53,21 +56,21 @@ def get_user_item_index(supabase_url: str, supabase_key: str) -> List[Tuple[str,
         return []
 
 
-def get_subscribed_users(supabase_url: str, supabase_key: str) -> List[str]:
+def get_subscriptions(supabase_url: str, supabase_key: str) -> List[Dict]:
     supabase_client = init_supabase_client(supabase_url, supabase_key)
 
     try:
-        response = (
-            supabase_client.table(SUBSCRIPTION_TABLE_ID).select("user_id").execute()
-        )
-        user_ids = []
+        response = supabase_client.rpc(GET_ACTIVE_SUBSCRIPTIONS_RPC_NAME).execute()
+        entries = []
 
-        for row in response.data:
-            user_id = row["user_id"]
-            if user_id not in user_ids:
-                user_ids.append(user_id)
+        for data in response.data:
+            try:
+                subscription = Subscription.from_supabase(data)
+                entries.append(subscription.to_dict())
+            except Exception as e:
+                pass
 
-        return user_ids
+        return entries
 
     except Exception as e:
         print(e)

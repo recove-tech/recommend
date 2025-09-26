@@ -12,6 +12,37 @@ class InteractionType(Enum):
 
 
 @dataclass
+class Subscription:
+    user_id: str
+    created_at: str
+    status: str
+    expire_at: str | None = None
+
+    def __post_init__(self):
+        if not isinstance(self.created_at, str):
+            self.created_at = self.created_at.isoformat()
+        if self.expire_at and not isinstance(self.expire_at, str):
+            self.expire_at = self.expire_at.isoformat()
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "user_id": self.user_id,
+            "created_at": self.created_at,
+            "status": self.status,
+            "expire_at": self.expire_at,
+        }
+
+    @classmethod
+    def from_supabase(cls, data: Dict) -> "Subscription":
+        return cls(
+            user_id=data["user_id"],
+            created_at=data["created_at"],
+            status=data["status"],
+            expire_at=data.get("expire_at"),
+        )
+
+
+@dataclass
 class Vector:
     id: str
     values: List[float]

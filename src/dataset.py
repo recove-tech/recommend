@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pinecone
 
-from .enums import VINTED_INDEX_NAME, RECOVE_INDEX_NAME
+from .enums import VINTED_INDEX_NAME
 from .pinecone import fetch_vectors
 from .models import PineconeUsage, PineconeUsageEntry
 
@@ -81,13 +81,12 @@ class VectorUserDataset(BaseUserDataset):
 
         point_ids_dict = {
             VINTED_INDEX_NAME: defaultdict(list),
-            RECOVE_INDEX_NAME: defaultdict(list),
         }
 
         for row in rows:
             point_id = row["point_id"]
             item_id = row["item_id"]
-            namespace = row["category_type"]
+            namespace = row["namespace"]
             index_name = row["index_name"]
 
             if (user_id, item_id) in user_item_index:

@@ -1,29 +1,55 @@
-from typing import Iterable
+from typing import Optional, Tuple, Dict, List, Iterable
 
-import argparse
+from google.cloud import bigquery
+from collections import groupby
+
 import src
 
 
 BATCH_SIZE = None
-SECRETS_PATH = "secrets/mobile.json"
+SECRETS_PATH = "secrets.json"
 DISPLAY_EVERY = 50
-NUM_USERS = 2000
-MIN_NUM_INSERTS = 5000
 
 
-def parse_args() -> bool:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--is_subscribed",
-        "-sub",
-        type=lambda x: x.lower() == "true",
-        required=True,
-        default=True,
+def reset_subscription_table() -> bool:
+    subscriptions = src.supabase.get_subscriptions(
+        session.supabase_url, session.supabase_key
     )
 
-    args = parser.parse_args()
+    query = src.bigquery.make_reset_subscription_table_query()
+    success, result = src.bigquery.run_query(session.bq_client, query)
 
-    return args.is_subscribed
+    if success:
+        return src.bigquery.upload(
+            client=session.bq_client,
+            dataset_id=src.enums.BACKUP_DATASET_ID,
+            table_id=src.enums.SUBSCRIPTION_TABLE_ID,
+            rows=subscriptions,
+        )
+
+    return False
+
+
+def get_items_dataloader(
+    n_users: Optional[int] = None,
+    only_new: bool = True,
+) -> Tuple[Dict[str, List[bigquery.table.Row]], int]:
+    query = src.bigquery.query_user_items(n_users, only_new)
+    result = session.bq_client.query(query).result()
+
+    if result.total_rows == 0:
+        return [], 0
+
+    loader = {}
+
+    iterator = groupby(
+        sorted(result, key=lambda x: x["user_id"]), key=lambda x: x["user_id"]
+    )
+
+    for user_id, group in iterator:
+        loader[user_id] = list(group)
+
+    return loader, result.total_rows
 
 
 def process_user_dataset(dataset: src.dataset.VectorUserDataset) -> int:
@@ -112,40 +138,19 @@ def process_loader(
     return n_inserted, read_units
 
 
-def main(is_subscribed: bool) -> None:
+def main() -> None:
     global session
     secrets = src.utils.load_json(SECRETS_PATH)
     session = src.session.Session(secrets=secrets)
 
-    if is_subscribed:
-        user_ids = src.supabase.get_subscribed_users(
-            session.supabase_url, session.supabase_key
-        )
-    else:
-        user_ids = None
+    if not reset_subscription_table():
+        raise Exception("Failed to reset subscription table")
 
-    kwargs = {
-        "client": session.bq_client,
-        "dataset_id": session.bq_dataset_id,
-        "only_new": True,
-        "user_ids": user_ids,
-    }
-
-    loader, total_rows = src.bigquery.get_items_dataloader(**kwargs)
-    n_inserted, read_units = process_loader(loader, total_rows, True)
-
-    if is_subscribed or n_inserted < MIN_NUM_INSERTS:
-        print(
-            f"Only {n_inserted} insertions with only_new=True, retrying with only_new=False"
-        )
-
-        kwargs["only_new"] = False
-        kwargs["n_users"] = None if is_subscribed else NUM_USERS
-        loader, total_rows = src.bigquery.get_items_dataloader(**kwargs)
-
-        process_loader(loader, total_rows, False, read_units)
+    for only_new in [True, False]:
+        loader, total_rows = get_items_dataloader(only_new=only_new)
+        n_inserted, read_units = process_loader(loader, total_rows, only_new)
+        print(f"{only_new=} | {n_inserted=} | {read_units=}")
 
 
 if __name__ == "__main__":
-    is_subscribed = parse_args()
-    main(is_subscribed)
+    main()

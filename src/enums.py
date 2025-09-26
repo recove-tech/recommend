@@ -1,26 +1,12 @@
-PROJECT_ID = "recove-450509"
-PROD_DATASET_ID = "prod"
-BACKUP_DATASET_ID = "backup"
-VINTED_DATASET_ID = "vinted"
-RECOMMEND_DATASET_ID = "recommend"
-RECOVE_DATASET_ID = "recove"
+from typing import Literal
 
-ITEM_METADATA_TABLE_ID = "item_metadata"
-ITEM_TABLE_ID = "item"
-CLICK_OUT_TABLE_ID = "click_out"
-SAVED_TABLE_ID = "saved"
-PINECONE_TABLE_ID = "pinecone"
-PINECONE_QUERY_TABLE_ID = "pinecone_query"
-PINECONE_ITEM_TABLE_ID = "pinecone_item"
-QUERIES_TABLE_ID = "queries"
-QUERY_TABLE_ID = "query"
-USER_VECTOR_TABLE_ID = "user_vector"
-PINECONE_USAGE_TABLE_ID = "pinecone_usage"
-SUBSCRIPTION_TABLE_ID = "subscription"
 
-USER_VECTORS_INDEX_NAME = "uservectors"
+Domain = Literal["fr", "co.uk"]
+
+
 USER_INDEX_NAME = "user"
 VINTED_INDEX_NAME = "vinted"
-RECOVE_INDEX_NAME = "recove"
 
 PINECONE_PER_READ_UNIT_COST = 0.000016
+
+GET_ACTIVE_SUBSCRIPTIONS_RPC_NAME = "get_active_subscriptions"

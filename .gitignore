@@ -2,7 +2,7 @@
 .DS_Store
 .ruff_cache/
 venv/
-secrets/
+secrets.json
 logs/
 
 # Python
@@ -11,8 +11,3 @@ __pycache__/
 *.pyo
 *.pyd
 *.whl
-
-# Poetry
-.venv/
-poetry.lock
-dist/

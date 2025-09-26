@@ -20,15 +20,12 @@ class Session:
         self.bq_client = init_client(self.secrets["GCP_CREDENTIALS"])
 
         self.pc_client = Pinecone(api_key=self.secrets.get("PINECONE_API_KEY"))
-
         self.vinted_index = self.pc_client.Index(VINTED_INDEX_NAME)
-        self.recove_index = self.pc_client.Index(RECOVE_INDEX_NAME)
         self.user_index = self.pc_client.Index(USER_INDEX_NAME)
 
     @property
     def index_mapping(self) -> Dict[str, Index]:
         return {
             VINTED_INDEX_NAME: self.vinted_index,
-            RECOVE_INDEX_NAME: self.recove_index,
             USER_INDEX_NAME: self.user_index,
         }
